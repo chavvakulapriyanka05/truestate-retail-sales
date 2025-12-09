@@ -29,7 +29,10 @@ app.use(
 app.use(express.json());
 
 // API routes
-app.use("/api", salesRoutes);
+app.use("/sales", salesRoutes);
+app.get("/", (req, res) => {
+  res.send("Retail sales API is running");
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

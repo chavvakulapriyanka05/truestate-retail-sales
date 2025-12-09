@@ -3,11 +3,13 @@
 // In development: falls back to localhost
 // In production: uses VITE_API_BASE_URL from Vercel env
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+  import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 
 export async function getSales(params = {}) {
   // Base URL + path, no hard-coded ?query here
-  const url = new URL("/api/sales", API_BASE_URL);
+  const url = new URL(`${API_BASE_URL}/sales`);
+
 
   // Attach query params
   for (const [key, value] of Object.entries(params)) {
