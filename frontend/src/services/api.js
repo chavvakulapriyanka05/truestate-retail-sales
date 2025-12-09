@@ -2,8 +2,15 @@
 
 // In development: falls back to localhost
 // In production: uses VITE_API_BASE_URL from Vercel env
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:4000";
+// src/services/api.js
+
+// Ensure trailing slash is removed and fallback is correct
+const envBase = import.meta.env.VITE_API_BASE_URL;
+export const BASE_URL = (envBase && envBase !== "undefined")
+  ? envBase
+  : "https://truestate-retail-sales-1-lg1e.onrender.com/api";
+
+
 
 
 export async function getSales(params = {}) {
