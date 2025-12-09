@@ -1,32 +1,29 @@
-import axios from "axios";
+// frontend/src/services/api.js
 
-const BASE_URL =
+// In development: falls back to localhost
+// In production: uses VITE_API_URL from Vercel env
+const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
-export async function fetchSales({ search, filters, sorting, page }) {
-  const params = new URLSearchParams();
+export async function getSales(params = {}) {
+  const url = new URL(`${API_BASE_URL}/sales`);
 
-  if (search) params.set("search", search);
-  if (filters.regions.length) params.set("regions", filters.regions.join(","));
-  if (filters.genders.length) params.set("genders", filters.genders.join(","));
-  if (filters.ageMin) params.set("ageMin", filters.ageMin);
-  if (filters.ageMax) params.set("ageMax", filters.ageMax);
-  if (filters.productCategories.length)
-    params.set("productCategories", filters.productCategories.join(","));
-  if (filters.tags.length) params.set("tags", filters.tags.join(","));
-  if (filters.paymentMethods.length)
-    params.set("paymentMethods", filters.paymentMethods.join(","));
-  if (filters.dateStart) params.set("dateStart", filters.dateStart);
-  if (filters.dateEnd) params.set("dateEnd", filters.dateEnd);
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
 
-  if (sorting.sortBy) params.set("sortBy", sorting.sortBy);
-  if (sorting.sortOrder) params.set("sortOrder", sorting.sortOrder);
+    if (Array.isArray(value)) {
+      if (!value.length) continue;
+      url.searchParams.set(key, value.join(","));
+    } else {
+      url.searchParams.set(key, String(value));
+    }
+  }
 
-  params.set("page", page);
-  params.set("pageSize", 10);
+  const res = await fetch(url.toString());
 
-  const url = `${BASE_URL}/sales?${params.toString()}`;
+  if (!res.ok) {
+    throw new Error(`Failed to load data (${res.status})`);
+  }
 
-  const res = await axios.get(url);
-  return res.data;
+  return res.json(); // { meta, data }
 }
