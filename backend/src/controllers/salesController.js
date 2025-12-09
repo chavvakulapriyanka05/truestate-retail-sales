@@ -1,9 +1,13 @@
 // backend/src/controllers/salesController.js
 import mongoose from "mongoose";
 
-// This is the same collection you imported your CSV into.
-// If you already have a model, import that instead.
-const Sales = mongoose.connection.collection("sales");
+// --- Use a proper Mongoose model instead of connection.collection() ---
+// Empty schema with strict:false so we don't need to define all fields
+const salesSchema = new mongoose.Schema({}, { strict: false });
+
+// Re-use existing model if it’s already compiled (hot reload / tests)
+const Sales =
+  mongoose.models.Sales || mongoose.model("Sales", salesSchema, "sales");
 
 /**
  * Helper: turn "North,South" OR ["North","South"] into ["North","South"]
@@ -18,7 +22,7 @@ function parseList(value) {
 }
 
 /**
- * GET /api/sales
+ * GET /sales
  * Supports:
  *  - search
  *  - page, pageSize
@@ -59,10 +63,7 @@ export async function getSales(req, res) {
     // -------- Search (customer name / phone) --------
     if (search && search.trim()) {
       const regex = new RegExp(search.trim(), "i");
-      filter.$or = [
-        { "Customer Name": regex },
-        { "Phone Number": regex },
-      ];
+      filter.$or = [{ "Customer Name": regex }, { "Phone Number": regex }];
     }
 
     // -------- Multi-select filters --------
@@ -110,7 +111,7 @@ export async function getSales(req, res) {
         const end = new Date(dateEnd);
         // include whole end day
         end.setHours(23, 59, 59, 999);
-        dateFilter.$lte = end;
+        dateFilter.Date = dateFilter;
       }
       filter.Date = dateFilter;
     }
@@ -131,11 +132,7 @@ export async function getSales(req, res) {
 
     // -------- Query DB --------
     const [items, totalItems] = await Promise.all([
-      Sales.find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(sizeNum)
-        .toArray(),
+      Sales.find(filter).sort(sort).skip(skip).limit(sizeNum).lean(),
       Sales.countDocuments(filter),
     ]);
 
@@ -151,6 +148,7 @@ export async function getSales(req, res) {
       data: items,
     });
   } catch (err) {
+    // This will show the real error in Render’s logs
     console.error("Error in getSales:", err);
     res.status(500).json({ error: "Failed to load sales data" });
   }
