@@ -1,40 +1,44 @@
 // backend/src/index.js
 import express from "express";
+import mongoose from "mongoose";
 import cors from "cors";
-import dotenv from "dotenv";
 import salesRoutes from "./routes/salesRoutes.js";
-
-dotenv.config();
 
 const app = express();
 
-// ✅ Allow frontend (Vercel) + local dev
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://truestate-retail-sales.vercel.app",
-];
-
-app.use(
-  cors({
-    origin(origin, callback) {
-      // allow mobile apps / curl (no origin) and our known origins
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
-  })
-);
-
+// Middlewares
+app.use(cors());
 app.use(express.json());
 
-// API routes
+// Routes
 app.use("/sales", salesRoutes);
-app.get("/", (req, res) => {
-  res.send("Retail sales API is running");
-});
 
+// Port (Render will inject PORT, otherwise fall back to 4000)
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+
+// MongoDB connection string
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error("❌ MONGODB_URI env variable is NOT set");
+  process.exit(1);
+}
+
+// Optional, to avoid some warnings
+mongoose.set("strictQuery", false);
+
+// Connect to MongoDB and start server only after success
+mongoose
+  .connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000, // 10s timeout for Render
+  })
+  .then(() => {
+    console.log("✅ MongoDB connected successfully");
+    app.listen(PORT, () => {
+      console.log(`✅ Server listening on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1); // don’t keep running if DB is dead
+  });
